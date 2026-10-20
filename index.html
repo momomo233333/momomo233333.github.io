@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>于舒瑄 · 我用AI做了什么</title>
+<style>
+/* 想换颜色，改这里 */
+:root {
+  --blue: #2f6fed;
+  --blue-light: #eaf1ff;
+  --text: #1f2733;
+  --gray: #5b6472;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  color: var(--text);
+  line-height: 1.8;
+}
+@keyframes fade {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.box { max-width: 700px; margin: 0 auto; padding: 0 20px; }
+
+/* ===== 头部：名字 + 一句话（已去掉头像）===== */
+header {
+  background: linear-gradient(180deg, var(--blue-light), #fff);
+  text-align: center;
+  padding: 56px 20px 40px;
+  animation: fade .8s ease both;
+}
+.name { font-size: 1.9rem; letter-spacing: 2px; }
+.tagline { margin-top: 8px; color: var(--gray); font-size: .98rem; }
+
+/* ===== 重点板块：我用AI做了什么 ===== */
+main { padding: 44px 0 52px; animation: fade .8s ease .15s both; }
+.title {
+  font-size: 1.3rem; margin-bottom: 8px;
+  padding-left: 12px; border-left: 4px solid var(--blue);
+}
+.intro { color: var(--gray); font-size: .95rem; margin-bottom: 20px; }
+.ai-list { display: grid; gap: 14px; }
+.ai-item {
+  background: var(--blue-light);
+  border-radius: 12px;
+  padding: 14px 18px;
+  transition: all .3s;
+}
+.ai-item:hover {
+  transform: translateY(-3px);
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(31,79,189,.12);
+}
+.ai-item b { color: var(--blue); margin-right: 8px; }
+.ai-item p { color: var(--gray); font-size: .95rem; }
+
+/* ===== 感受板块 ===== */
+.feel-title { margin-top: 40px; }
+.feel-item {
+  background: #fff;
+  border: 1px solid #e6ebf5;
+  border-left: 4px solid var(--blue);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  transition: all .3s;
+}
+.feel-item:hover {
+  transform: translateX(4px);
+  box-shadow: 0 6px 16px rgba(31,79,189,.1);
+}
+.feel-item b { color: var(--blue); margin-right: 6px; }
+.feel-item p { color: var(--gray); font-size: .95rem; }
+
+/* ===== 底部：联系方式 ===== */
+footer {
+  background: var(--blue-light);
+  text-align: center;
+  padding: 32px 20px;
+  animation: fade .8s ease .3s both;
+}
+/* ① 改你的邮箱和 GitHub */
+.contact a {
+  color: var(--text); text-decoration: none;
+  margin: 0 12px;
+  transition: color .3s;
+}
+.contact a:hover { color: var(--blue); }
+.footer-note { margin-top: 10px; font-size: .85rem; color: var(--gray); }
+
+/* 手机适配 */
+@media (max-width: 560px) {
+  header { padding: 40px 16px 30px; }
+  .name { font-size: 1.6rem; }
+  main { padding: 34px 0 40px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 class="name">于舒瑄</h1>
+  <p class="tagline">学生 × AI：认真学，踏实用</p>
+</header>
+
+<main>
+  <div class="box">
+    <h2 class="title">我用 AI 做了什么</h2>
+    <p class="intro">
+      作为学生，我把 AI 当成学习上的帮手：用它之前先自己动脑，用它之后自己消化吸收。
+      下面是我平时用得最多的四件事——
+    </p>
+    <div class="ai-list">
+      <!-- ② 四条内容，可改成你自己的真实经历 -->
+
+      <div class="ai-item">
+        <p><b>💻 检查代码</b>课后的编程练习，我会先自己写、自己排查报错，再把代码交给 AI 检查。
+        请它指出逻辑漏洞和改进建议，听它讲清楚之后再动手修正，而不是直接抄答案。</p>
+      </div>
+
+      <div class="ai-item">
+        <p><b>📊 制作 PPT</b>做课堂展示前，我先自己把内容要点列出来，再请 AI 帮忙组织大纲、
+        润色表述。页面讲什么、先后顺序如何，都在动手做之前理清楚，上台讲起来也更有条理。</p>
+      </div>
+
+      <div class="ai-item">
+        <p><b>📖 学习专业知识</b>结合课程的测试题来学：先独立做完，再把错题交给 AI，
+        让它讲清每道题考的是哪个知识点、我错在哪、正确思路是什么，弄懂后再找同类题巩固。</p>
+      </div>
+
+      <div class="ai-item">
+        <p><b>📋 规划学习计划表</b>开学时把课程安排、考试时间和空闲时段告诉 AI，
+        一起排出每周的学习计划表，明确每天学什么、复习什么，按表执行，每周结束再根据进度调整。</p>
+      </div>
+
+    </div>
+
+    <!-- ============ 我用 AI 的感受 ============ -->
+    <h2 class="title feel-title">我用 AI 的感受</h2>
+    <div class="feel">
+      <!-- ③ 四条感受，可删减或改成自己的话 -->
+      <div class="feel-item">
+        <p><b>帮手，不是答案。</b>用 AI 之前我会先自己思考，用它讲完的内容也一定会自己弄懂，
+        不会的东西不能只靠抄，真正理解了才是自己的。</p>
+      </div>
+      <div class="feel-item">
+        <p><b>效率确实提高了。</b>以前整理资料、改作业表述要花很久，现在省下来的时间，
+        我用来复习、刷题和巩固，学习节奏比以前从容。</p>
+      </div>
+      <div class="feel-item">
+        <p><b>不能全盘相信。</b>AI 偶尔也会出错，涉及考试重点和作业结论的内容，
+        我都会再对照教材核实一遍，用它但不依赖它。</p>
+      </div>
+      <div class="feel-item">
+        <p><b>慢慢学会了配合。</b>我负责想清楚要什么，AI 负责查漏补缺。
+        用得多了，我发现自己的思路反而更清楚了，提问也越来越会问。</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="contact">
+    <a href="mailto:yushuxuan@email.com">📧 294088@qq.com</a>
+    <a href="https://github.com/yushuxuan" target="_blank">🐙 github.com/yushuxuan</a>
+  </div>
+  <p class="footer-note">© 2026 于舒瑄 · 和 AI 一起学习，也保持自己的思考</p>
+</footer>
+
+</body>
+</html>
