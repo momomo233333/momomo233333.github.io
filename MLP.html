@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLP 是怎么学出参数的 · 于舒瑄 · 第二次作业</title>
+<style>
+:root{
+  --blue:#2f6fed; --blue-deep:#1f4fbd; --blue-light:#eaf1ff;
+  --orange:#ef7d32; --orange-light:#fff2e5;
+  --text:#1f2733; --gray:#5b6472; --line:#e2e9f6;
+  --bg:#f7f9fe; --card:#fff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;color:var(--text);line-height:1.8;background:var(--bg)}
+a{color:inherit}
+@keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.wrap{max-width:1000px;margin:0 auto;padding:0 22px}
+
+/* 顶栏 */
+.topbar{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
+.brand{font-size:.95rem;font-weight:600;letter-spacing:1px}
+.brand span{color:var(--blue)}
+.nav a{font-size:.88rem;text-decoration:none;color:var(--gray);margin-left:22px;transition:color .25s}
+.nav a:hover,.nav a.on{color:var(--blue)}
+.nav a.on{font-weight:600}
+
+/* 封面 */
+.hero{background:linear-gradient(180deg,var(--blue-light),#fff);padding:54px 0 46px;animation:fade .8s ease both}
+.kicker{display:inline-block;background:#fff;border:1px solid #cfdeff;color:var(--blue-deep);border-radius:20px;padding:3px 14px;font-size:.82rem;letter-spacing:1px}
+h1{font-size:2.15rem;line-height:1.35;margin:16px 0 12px;letter-spacing:1px}
+.lead{color:var(--gray);max-width:760px;font-size:1rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.chip{background:#fff;border:1px solid #d9e5ff;border-radius:8px;padding:4px 11px;font-size:.82rem;color:var(--blue-deep);font-family:Consolas,Monaco,monospace}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
+.btn{display:inline-block;background:var(--blue);color:#fff;text-decoration:none;border:0;border-radius:9px;padding:10px 20px;font-size:.9rem;cursor:pointer;transition:all .25s;font-family:inherit}
+.btn:hover{background:var(--blue-deep);transform:translateY(-2px);box-shadow:0 8px 18px rgba(47,111,237,.22)}
+.btn.ghost{background:#fff;color:var(--blue-deep);border:1px solid #cfdeff}
+.btn.ghost:hover{background:var(--blue-light)}
+
+/* 章节 */
+main{padding:12px 0 40px}
+section{padding-top:44px;animation:fade .7s ease both}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
+.sec-no{font-family:Consolas,Monaco,monospace;color:var(--blue);font-size:.9rem;letter-spacing:2px}
+h2{font-size:1.35rem;padding-left:12px;border-left:4px solid var(--blue);line-height:1.4}
+.sec-desc{color:var(--gray);font-size:.94rem;margin:10px 0 20px}
+h3{font-size:1.02rem;margin-bottom:10px;color:var(--text)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;transition:box-shadow .25s}
+.card:hover{box-shadow:0 8px 24px rgba(31,79,189,.08)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid2>*,.grid3>*,.panels>*,.steps>*,.metrics>*,.card,.panel{min-width:0}
+.muted{color:var(--gray);font-size:.88rem}
+.formula{background:var(--blue-light);border-radius:9px;padding:12px 16px;font-family:Consolas,Monaco,"Courier New",monospace;font-size:.92rem;color:#173a83;margin:8px 0;overflow-x:auto;white-space:nowrap}
+.note{border-left:3px solid var(--orange);background:var(--orange-light);border-radius:0 8px 8px 0;padding:10px 14px;font-size:.88rem;color:#7a4a1c;margin-top:14px}
+
+/* 表格 */
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--gray);font-weight:600;background:#fafbff;font-size:.84rem}
+td.mono,th.mono{font-family:Consolas,Monaco,monospace}
+tr:last-child td{border-bottom:0}
+.ok{color:var(--blue);font-weight:600}
+.bad{color:var(--orange);font-weight:600}
+
+/* 代码 / 终端 */
+pre{background:#f5f8ff;border:1px solid var(--line);border-radius:9px;padding:16px;overflow-x:auto;max-width:100%;font-family:Consolas,Monaco,"Courier New",monospace;font-size:.82rem;line-height:1.7;color:#26364f}
+pre.term{background:#1d2738;color:#d7e3f7;border-color:#1d2738;font-size:.8rem}
+pre.term .g{color:#8fe0a8}
+pre.term .y{color:#ffd48a}
+.code-tip{font-size:.84rem;color:var(--gray);margin-top:8px}
+
+/* 流程 */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.step{background:#fff;border:1px solid var(--line);border-top:3px solid var(--blue);border-radius:10px;padding:14px}
+.step b{display:block;color:var(--blue-deep);font-size:.92rem;margin-bottom:4px}
+.step span{font-size:.84rem;color:var(--gray)}
+.step em{font-family:Consolas,Monaco,monospace;font-style:normal;color:var(--blue);font-size:.8rem}
+
+/* 实验室 */
+.lab{background:linear-gradient(180deg,#fff,#f4f8ff);border:1px solid #d9e5ff;border-radius:16px;padding:22px;margin-top:8px}
+.ctrl{display:flex;flex-wrap:wrap;gap:14px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+.ctrl label{font-size:.86rem;color:var(--gray);margin-right:6px}
+.ctrl input[type=range]{vertical-align:middle;accent-color:var(--blue);cursor:pointer}
+.ctrl select,.ctrl input[type=number]{border:1px solid #d5e0f5;border-radius:7px;padding:5px 8px;font-family:inherit;font-size:.85rem;color:var(--text);background:#fff}
+.ctrl input[type=number]{width:92px}
+.ctrl .mini{padding:7px 13px;font-size:.84rem;border-radius:8px}
+.slider-row{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.slider-row input[type=range]{flex:1;min-width:220px}
+.epoch-badge{font-family:Consolas,Monaco,monospace;background:var(--blue);color:#fff;border-radius:7px;padding:3px 10px;font-size:.86rem;min-width:96px;text-align:center}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}
+.metric{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.metric small{display:block;color:var(--gray);font-size:.8rem}
+.metric strong{font-family:Consolas,Monaco,monospace;font-size:1.32rem;color:var(--blue-deep);font-weight:600}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:11px;padding:16px;min-width:0}
+.panel h3{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.panel h3 span{font-size:.78rem;color:var(--gray);font-weight:400}
+canvas{display:block;width:100%;height:220px;border-radius:8px;background:#fbfcff}
+canvas.square{height:auto;aspect-ratio:1/1;width:100%;max-width:340px;margin:0 auto}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:.76rem;color:var(--gray);margin-top:8px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.tabs{display:inline-flex;border:1px solid #d5e0f5;border-radius:7px;overflow:hidden}
+.tabs button{border:0;background:#fff;color:var(--gray);font-family:inherit;font-size:.78rem;padding:3px 11px;cursor:pointer}
+.tabs button.on{background:var(--blue);color:#fff}
+.sample-pick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.sample-pick button{border:1px solid #d5e0f5;background:#fff;border-radius:7px;padding:5px 12px;font-family:Consolas,Monaco,monospace;font-size:.84rem;cursor:pointer;color:var(--gray)}
+.sample-pick button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.calc{font-family:Consolas,Monaco,monospace;font-size:.84rem;line-height:2;background:#f7faff;border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:nowrap}
+.calc b{color:var(--blue-deep)}
+.param-table td:first-child{font-family:Consolas,Monaco,monospace;color:var(--blue-deep)}
+.network-svg{width:100%;height:auto;display:block}
+.threshold-row{display:flex;align-items:center;gap:10px;font-size:.84rem;color:var(--gray);margin-top:10px}
+.threshold-row input[type=range]{flex:1;accent-color:var(--orange)}
+
+/* 结论 */
+.findings{display:grid;gap:12px}
+.finding{background:#fff;border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:9px;padding:13px 16px}
+.finding b{color:var(--blue-deep)}
+.finding p{font-size:.9rem;color:var(--gray)}
+ul.clean{list-style:none;display:grid;gap:8px}
+ul.clean li{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 14px;font-size:.9rem}
+ul.clean li::before{content:"·";color:var(--blue);font-weight:bold;margin-right:9px}
+
+footer{background:var(--blue-light);text-align:center;padding:30px 20px;margin-top:20px}
+footer p{font-size:.86rem;color:var(--gray)}
+footer a{color:var(--blue-deep);text-decoration:none;margin:0 8px}
+footer a:hover{text-decoration:underline}
+.ref{font-size:.84rem;color:var(--gray);margin-top:10px}
+.ref a{color:var(--blue)}
+
+@media(max-width:760px){
+  h1{font-size:1.7rem}
+  .grid2,.grid3,.panels,.steps,.metrics{grid-template-columns:1fr 1fr}
+  .panels{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr 1fr}
+  .wrap{padding:0 15px}
+  .nav a{margin-left:12px}
+}
+@media(max-width:560px){
+  .topbar .wrap{height:auto;flex-wrap:wrap;gap:2px;padding-top:8px;padding-bottom:8px}
+  .brand{font-size:.85rem}
+  .nav a{font-size:.82rem;margin-left:14px}
+  .card,.panel{padding:14px}
+  table{font-size:.84rem}
+  th,td{padding:7px 6px}
+}
+@media(max-width:480px){
+  .grid2,.grid3,.steps,.metrics{grid-template-columns:1fr}
+  .brand{font-size:.85rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand">于舒瑄 <span>·</span> 我用 AI 做了什么</div>
+    <nav class="nav">
+      <a href="index.html">首页</a>
+      <a href="#top" class="on">第二次作业</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <span class="kicker">人工智能概论 · 第二次作业 · 第二篇 15 节</span>
+    <h1>MLP 是怎么「学」出参数的</h1>
+    <p class="lead">从 XOR 的 4 个样本出发，不调用任何深度学习框架，手写前向传播、二元交叉熵、反向传播与 Adam，把一个 2→2→1 多层感知机的 9 个参数从随机数训练到能分出非线性边界，再把每一步都画出来。</p>
+    <div class="chips">
+      <span class="chip">2 → 2 → 1</span><span class="chip">Sigmoid</span>
+      <span class="chip">Binary Cross Entropy</span><span class="chip">Backpropagation</span>
+      <span class="chip">Adam · 1500 epochs</span><span class="chip">纯 Python / 原生 JS</span>
+    </div>
+    <div class="btns">
+      <a class="btn" href="#lab">进入参数学习实验室</a>
+      <a class="btn ghost" href="mlp_xor.py" download>下载 Python 源码</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 01 -->
+  <section>
+    <div class="sec-head"><span class="sec-no">01</span><h2>题目：为什么必须「学」参数</h2></div>
+    <p class="sec-desc">XOR（异或）只有 4 个样本，却是感知机最著名的反例：同一类的两个点处在对角线上，任何一条直线都分不开它们。</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>XOR 真值表</h3>
+        <table>
+          <tr><th>输入 x₁, x₂</th><th>目标 y</th><th>说明</th></tr>
+          <tr><td class="mono">[0, 0]</td><td class="mono">0</td><td>全 0 输出 0</td></tr>
+          <tr><td class="mono">[0, 1]</td><td class="mono">1</td><td>只有一个 1 输出 1</td></tr>
+          <tr><td class="mono">[1, 0]</td><td class="mono">1</td><td>只有一个 1 输出 1</td></tr>
+          <tr><td class="mono">[1, 1]</td><td class="mono">0</td><td>两个都是 1 反而输出 0</td></tr>
+        </table>
+        <div class="note">单层感知机只能给出 w₁x₁ + w₂x₂ + b &gt; 0 这样的一条直线。把四类点代进去会得到互相矛盾的不等式，所以无解 —— 必须先用一个隐藏层把输入「变形」。</div>
+      </div>
+      <div class="card">
+        <h3>输入空间里的四个点</h3>
+        <svg viewBox="0 0 320 250" class="network-svg" aria-label="XOR 四点示意图">
+          <rect x="0" y="0" width="320" height="250" fill="#ffffff"/>
+          <line x1="50" y1="205" x2="290" y2="205" stroke="#9fb0cc" stroke-width="1.5"/>
+          <line x1="50" y1="205" x2="50" y2="25" stroke="#9fb0cc" stroke-width="1.5"/>
+          <line x1="50" y1="115" x2="290" y2="115" stroke="#e2e9f6" stroke-width="1"/>
+          <line x1="170" y1="25" x2="170" y2="205" stroke="#e2e9f6" stroke-width="1"/>
+          <text x="296" y="210" font-size="13" fill="#5b6472">x₁</text>
+          <text x="38" y="20" font-size="13" fill="#5b6472">x₂</text>
+          <text x="44" y="222" font-size="12" fill="#5b6472">0</text>
+          <text x="164" y="222" font-size="12" fill="#5b6472">1</text>
+          <text x="32" y="120" font-size="12" fill="#5b6472">1</text>
+          <circle cx="50" cy="205" r="9" fill="#2f6fed"/><text x="65" y="190" font-size="12" fill="#1f2733">[0,0] → 0</text>
+          <circle cx="50" cy="115" r="9" fill="#ef7d32"/><text x="65" y="110" font-size="12" fill="#1f2733">[0,1] → 1</text>
+          <circle cx="170" cy="205" r="9" fill="#ef7d32"/><text x="185" y="200" font-size="12" fill="#1f2733">[1,0] → 1</text>
+          <circle cx="170" cy="115" r="9" fill="#2f6fed"/><text x="185" y="110" font-size="12" fill="#1f2733">[1,1] → 0</text>
+          <line x1="58" y1="197" x2="162" y2="123" stroke="#b9c8e4" stroke-width="1.5" stroke-dasharray="5 5"/>
+          <text x="50" y="242" font-size="11.5" fill="#5b6472">同类点位于对角，直线无能为力</text>
+        </svg>
+      </div>
+    </div>
+    <p class="sec-desc" style="margin-top:18px">本次作业要完成三件事：<b>① 手写实现</b>参数学习（不用框架现成的优化器）；<b>② 记录</b>训练过程中 9 个参数与损失的变化；<b>③ 可视化</b>参数、分类边界与预测结果，并解释参数到底学到了什么。</p>
+  </section>
+
+  <!-- 02 -->
+  <section>
+    <div class="sec-head"><span class="sec-no">02</span><h2>网络结构与一次前向传播</h2></div>
+    <p class="sec-desc">两个输入、两个隐藏节点、一个输出，一共 <b>9 个可学习参数</b>：W₁(2×2)、b₁(2)、W₂(2)、b₂(1)。</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>结构示意</h3>
+        <svg viewBox="0 0 460 250" class="network-svg" aria-label="2-2-1 MLP 结构图">
+          <rect x="0" y="0" width="460" height="250" fill="#ffffff"/>
+          <g stroke="#c9d6ee" stroke-width="1.5">
+            <line x1="80" y1="70" x2="230" y2="70"/><line x1="80" y1="70" x2="230" y2="180"/>
+            <line x1="80" y1="180" x2="230" y2="70"/><line x1="80" y1="180" x2="230" y2="180"/>
+            <line x1="230" y1="70" x2="380" y2="125"/><line x1="230" y1="180" x2="380" y2="125"/>
+          </g>
+          <g fill="#eaf1ff" stroke="#2f6fed" stroke-width="2">
+            <circle cx="65" cy="70" r="19"/><circle cx="65" cy="180" r="19"/>
+            <circle cx="230" cy="70" r="21"/><circle cx="230" cy="180" r="21"/>
+            <circle cx="380" cy="125" r="21" fill="#fff2e5" stroke="#ef7d32"/>
+          </g>
+          <g font-size="14" fill="#1f4fbd" text-anchor="middle" font-family="Consolas,monospace">
+            <text x="65" y="75">x₁</text><text x="65" y="185">x₂</text>
+            <text x="230" y="76">h₁</text><text x="230" y="186">h₂</text>
+            <text x="380" y="131" fill="#b45b18">ŷ</text>
+          </g>
+          <g font-size="12" fill="#5b6472" text-anchor="middle">
+            <text x="65" y="32">输入层</text><text x="230" y="32">隐藏层</text><text x="380" y="88">输出层</text>
+            <text x="145" y="52">W₁, b₁</text><text x="310" y="88">W₂, b₂</text>
+          </g>
+          <text x="230" y="232" font-size="11.5" fill="#5b6472" text-anchor="middle">隐藏层先做非线性变换，输出层再给出属于类别 1 的概率</text>
+        </svg>
+      </div>
+      <div class="card">
+        <h3>前向传播公式</h3>
+        <div class="formula">z₁ = x₁w₁₁ + x₂w₂₁ + b₁ ,  h₁ = σ(z₁)</div>
+        <div class="formula">z₂ = x₁w₁₂ + x₂w₂₂ + b₂ ,  h₂ = σ(z₂)</div>
+        <div class="formula">z₃ = h₁v₁ + h₂v₂ + c ,  ŷ = σ(z₃)</div>
+        <div class="formula">σ(t) = 1 / (1 + e<sup>−t</sup>)</div>
+        <p class="muted" style="margin-top:10px">参数在代码里按 <span class="mono">[w₁₁, w₁₂, w₂₁, w₂₂, b₁, b₂, v₁, v₂, c]</span> 的顺序存成一个长度为 9 的数组；σ 是 Sigmoid，把任意实数压到 (0, 1) 当作概率。</p>
+        <table style="margin-top:12px">
+          <tr><th>参数组</th><th>形状</th><th>作用</th></tr>
+          <tr><td class="mono">W₁, b₁</td><td class="mono">2×2, 2</td><td>把输入投影到隐藏空间</td></tr>
+          <tr><td class="mono">W₂ (v), c</td><td class="mono">2, 1</td><td>在隐藏空间画一条分界线</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 -->
+  <section>
+    <div class="sec-head"><span class="sec-no">03</span><h2>实现：参数是怎么被改动的</h2></div>
+    <p class="sec-desc">「学习」就是反复做四件事：算出预测 → 量出差距 → 把差距按链式法则分摊给每个参数 → 沿梯度反方向修改参数。</p>
+    <div class="steps">
+      <div class="step"><b>1 · 前向计算</b><span>代入当前 9 个参数，得到 4 个样本的 ŷ。</span><em>h=σ(xW₁+b₁), ŷ=σ(hW₂+c)</em></div>
+      <div class="step"><b>2 · 计算损失</b><span>二元交叉熵衡量预测与目标的距离。</span><em>L=−mean[y·lnŷ+(1−y)·ln(1−ŷ)]</em></div>
+      <div class="step"><b>3 · 反向传播</b><span>从输出误差 d₂=ŷ−y 出发，乘 Sigmoid 导数逐层回传。</span><em>∂L/∂W = hiddenᵀ · d</em></div>
+      <div class="step"><b>4 · Adam 更新</b><span>用梯度的一阶、二阶动量自适应地调整步长。</span><em>θ ← θ − lr·m̂/(√v̂+ε)</em></div>
+    </div>
+    <div class="grid2" style="margin-top:16px">
+      <div class="card">
+        <h3>核心代码（<span class="mono" style="font-size:.85rem;color:var(--gray)">mlp_xor.py</span> 节选）</h3>
+<pre>def forward(p, x):
+    z1 = x[0]*p[0] + x[1]*p[2] + p[4]
+    z2 = x[0]*p[1] + x[1]*p[3] + p[5]
+    h1, h2 = sigmoid(z1), sigmoid(z2)
+    y_hat = sigmoid(h1*p[6] + h2*p[7] + p[8])
+    return h1, h2, y_hat
+
+def gradients(p):            # 手写反向传播
+    g = [0.0]*9
+    for i in range(N):
+        x = X[i]
+        h1, h2, y_hat = forward(p, x)
+        d2 = y_hat - Y[i]                 # 输出层误差
+        g[6] += d2*h1; g[7] += d2*h2; g[8] += d2
+        d1a = d2*p[6]*h1*(1-h1)           # 误差经 W2 回传
+        d1b = d2*p[7]*h2*(1-h2)
+        g[0] += d1a*x[0]; g[1] += d1b*x[0]
+        g[2] += d1a*x[1]; g[3] += d1b*x[1]
+        g[4] += d1a;      g[5] += d1b
+    return [v/N for v in g]             # 全批量平均
+
+def train(epochs=1500, lr=0.05, seed=2):
+    p = make_params(seed)               # 9 个参数初始化
+    m, v = [0.0]*9, [0.0]*9             # Adam 动量
+    for t in range(1, epochs+1):
+        g = gradients(p)
+        for j in range(9):
+            m[j] = .9*m[j] + .1*g[j]
+            v[j] = .999*v[j] + .001*g[j]*g[j]
+            mh = m[j]/(1-.9**t); vh = v[j]/(1-.999**t)
+            p[j] -= lr*mh/(math.sqrt(vh)+1e-8)
+    return p</pre>
+        <p class="code-tip">完整可运行源码（含随机数、损失、打印与 JSON 导出）：<a href="mlp_xor.py" download style="color:var(--blue)">下载 mlp_xor.py</a>，命令行执行 <span class="mono">python mlp_xor.py</span>。</p>
+      </div>
+      <div class="card">
+        <h3>本机真实运行输出</h3>
+<pre class="term">$ python mlp_xor.py
+<span class="y">结构 2→2→1 | Sigmoid | BCE | Adam
+1500 轮 | lr=0.05 | seed=2</span>
+ 初始参数 : <span class="g">-0.6316 -0.0961 -0.7465  0.5806
+             0.0000  0.0000  0.5208 -0.9186  0.0000</span>
+ 训练后参数: <span class="g">-7.9813 -9.4837 -7.9765 -9.5324
+             11.8496  4.3262 14.5477 -14.8047 -7.0387</span>
+ 初始 loss 0.710538 → 最终 loss 0.000883
+ 初始准确率 50% → 最终准确率 100%
+
+ 输入        目标   预测概率   判定
+ [0.0, 0.0]   0     0.0008     ✓
+ [0.0, 1.0]   1     0.9992     ✓
+ [1.0, 0.0]   1     0.9992     ✓
+ [1.0, 1.0]   0     0.0011     ✓
+
+ loss: ep76=0.6931  ep301=0.0178
+       ep751=0.0030  ep1500=0.0009</pre>
+        <div class="note">网页中的曲线、边界与参数都<b>不是示意图</b>：浏览器用原生 JavaScript 复现了同一套公式和同一个随机数生成器，逐轮真实计算；与上面 Python 的运行结果一致。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 -->
+  <section id="lab">
+    <div class="sec-head"><span class="sec-no">04</span><h2>参数学习实验室 · 拖动看每一步</h2></div>
+    <p class="sec-desc">拖动轮次滑块或点「从头播放」，观察 9 个参数、Loss、网络连线与分类边界如何一起变化；也可以改学习率、轮数和随机种子重新训练一次。</p>
+
+    <div class="lab">
+      <div class="ctrl">
+        <div><label>学习率</label><select id="lrSel">
+          <option value="0.01">0.01</option><option value="0.03">0.03</option>
+          <option value="0.05" selected>0.05</option><option value="0.1">0.1</option><option value="0.2">0.2</option>
+        </select></div>
+        <div><label>训练轮数</label><select id="epSel">
+          <option value="300">300</option><option value="800">800</option>
+          <option value="1500" selected>1500</option><option value="3000">3000</option>
+        </select></div>
+        <div><label>随机种子</label><input type="number" id="seedIn" value="2" min="0" max="999999"></div>
+        <button class="btn mini" id="retrainBtn">重新训练</button>
+        <button class="btn mini ghost" id="badSeedBtn">试试会卡住的种子</button>
+        <button class="btn mini ghost" id="playBtn">从头播放</button>
+        <button class="btn mini ghost" id="resetBtn">回到第 0 轮</button>
+      </div>
+
+      <div class="slider-row">
+        <label style="font-size:.86rem;color:var(--gray)">训练轮次</label>
+        <input type="range" id="epRange" min="0" max="1500" value="1500" step="1">
+        <span class="epoch-badge" id="epBadge">1500 / 1500</span>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><small>Loss（二元交叉熵）</small><strong id="mLoss">—</strong></div>
+        <div class="metric"><small>Accuracy</small><strong id="mAcc">—</strong></div>
+        <div class="metric"><small>最大 |权重|</small><strong id="mMax">—</strong></div>
+        <div class="metric"><small>分类正确的样本</small><strong id="mOk">—</strong></div>
+      </div>
+
+      <div class="panels">
+        <div class="panel">
+          <h3>Loss 曲线 <span>纵轴：二元交叉熵；圆点 = 当前轮次</span></h3>
+          <canvas id="lossCv"></canvas>
+          <div class="legend"><span><i style="background:#2f6fed"></i>训练损失</span><span><i style="background:#ef7d32"></i>当前轮次</span><span id="lossNote"></span></div>
+        </div>
+
+        <div class="panel">
+          <h3>参数随训练的变化
+            <span class="tabs"><button id="tabW" class="on">权重 W</button><button id="tabB">偏置 b</button></span>
+          </h3>
+          <canvas id="paramCv"></canvas>
+          <div class="legend" id="paramLegend"></div>
+        </div>
+
+        <div class="panel">
+          <h3>网络与权重连线 <span>线越粗 = |权重| 越大</span></h3>
+          <svg viewBox="0 0 460 250" class="network-svg" id="netSvg" aria-label="实时权重连线图">
+            <rect x="0" y="0" width="460" height="250" fill="#ffffff"/>
+            <g id="netLines"></g>
+            <g id="netNodes"></g>
+            <g id="netLabels"></g>
+            <g font-size="12" fill="#5b6472" text-anchor="middle">
+              <text x="65" y="32">输入层</text><text x="230" y="32">隐藏层</text><text x="390" y="32">输出层</text>
+            </g>
+          </svg>
+          <div class="legend">
+            <span><i style="background:#2f6fed"></i>正权重</span><span><i style="background:#ef7d32"></i>负权重</span>
+            <span>节点内数字 = 当前样本的激活值</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>决策区域 <span>逐点采样真实模型输出</span></h3>
+          <canvas id="boundCv" class="square"></canvas>
+          <div class="threshold-row">
+            <label>分类阈值</label><input type="range" id="thrRange" min="0.05" max="0.95" step="0.01" value="0.5">
+            <span class="mono" id="thrVal" style="color:var(--blue-deep)">0.50</span>
+          </div>
+          <div class="legend"><span><i style="background:#2f6fed"></i>判为 0</span><span><i style="background:#ef7d32"></i>判为 1</span><span>颜色越深 = 越确信；白线 = 阈值边界</span></div>
+        </div>
+
+        <div class="panel">
+          <h3>一次前向传播的数值展开</h3>
+          <div class="sample-pick" id="samplePick"></div>
+          <div class="calc" id="calcBox"></div>
+        </div>
+
+        <div class="panel">
+          <h3>当前轮次的 9 个参数</h3>
+          <table class="param-table">
+            <tr><th>符号</th><th>含义</th><th>初始值</th><th>当前值</th></tr>
+            <tbody id="paramBody"></tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3>四个样本的预测</h3>
+          <table>
+            <tr><th>输入</th><th>目标</th><th>预测概率 ŷ</th><th>判定</th></tr>
+            <tbody id="predBody"></tbody>
+          </table>
+          <div class="note" id="labNote"></div>
+        </div>
+
+        <div class="panel">
+          <h3>隐藏层把点搬到了哪里 <span>(h₁, h₂) 空间</span></h3>
+          <svg viewBox="0 0 320 250" class="network-svg" id="hiddenSvg" aria-label="隐藏层空间散点图">
+            <rect x="0" y="0" width="320" height="250" fill="#ffffff"/>
+            <g id="hiddenGrid"></g>
+            <g id="hiddenLine"></g>
+            <g id="hiddenDots"></g>
+          </svg>
+          <p class="muted" style="margin-top:6px">输入空间里线性不可分的四个点，被 W₁、b₁ 映射到隐藏空间后，输出层只需一条直线 <span class="mono">v₁h₁ + v₂h₂ + c = 0</span> 就能分开。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 -->
+  <section>
+    <div class="sec-head"><span class="sec-no">05</span><h2>观察与结论</h2></div>
+    <div class="findings">
+      <div class="finding"><b>① 参数确实「学」到了东西。</b><p>初始 9 个参数接近 0 附近的小随机数，Loss 0.7105、准确率 50%；1500 轮后 Loss 0.000883、准确率 100%。隐藏层两个节点分别学成了「与非」和「或非」式的特征检测器：h₁ 只在 (1,1) 时接近 0，h₂ 只在 (0,0) 时接近 1，输出层用 v₁≈+14.5、v₂≈−14.8 把两者相减，于是 (0,1)、(1,0) 被判为 1，另外两点判为 0。</p></div>
+      <div class="finding"><b>② Loss 曲线有一段「平台期」。</b><p>前约 100 轮 Loss 几乎停在 0.693（四个样本都猜 0.5），这是 Sigmoid 饱和导致的梯度很小；一旦走出平台，Loss 迅速下降到 0.02 以下，参数与决策边界在这个阶段同时发生明显变化。</p></div>
+      <div class="finding"><b>③ 初始化很重要：不是每次都能学会。</b><p>点「试试会卡住的种子」（seed = 20261122）重新训练，会看到 Loss 停在约 0.3467、准确率只有 50%：网络掉进了局部极小，把两个样本永远预测成 0.5。这正是 XOR 小网络的经典现象，也说明「学习参数」不等于「一定学得出来」。</p></div>
+      <div class="finding"><b>④ 可视化让「黑箱」变得可检查。</b><p>权重连线图能看出哪些连接被强化、符号是正是负；决策区域从一整片模糊的 0.5，逐渐分裂成两个对角区域；隐藏空间散点图则直接显示：非线性问题被变换成了线性可分问题。</p></div>
+    </div>
+  </section>
+
+  <!-- 06 -->
+  <section>
+    <div class="sec-head"><span class="sec-no">06</span><h2>本次作业完成了什么</h2></div>
+    <ul class="clean">
+      <li>用纯 Python 从零搭建 2→2→1 MLP，手写前向传播、Sigmoid、二元交叉熵、反向传播与 Adam，不依赖任何第三方库。</li>
+      <li>在 XOR 四个样本上完成训练，记录并核对真实运行结果：Loss 0.7105 → 0.0009，四组预测全部正确。</li>
+      <li>用原生 JavaScript 在浏览器里复现同一套训练过程，逐轮保存 9 个参数，可拖动 / 播放任意轮次。</li>
+      <li>完成 6 类可视化：Loss 曲线、参数轨迹、权重连线网络图、真实逐点采样的决策区域、前向传播数值展开、隐藏空间变换图。</li>
+      <li>对比不同随机种子，解释局部极小现象，并结合训练后的参数数值说明隐藏节点各自学到了什么。</li>
+    </ul>
+    <p class="ref" style="margin-top:16px">参考：课代表的两次范例页面
+      <a href="https://alphekka221.github.io/myweb/MLP.html" target="_blank" rel="noopener">MLP / 参数学习 / 可视化</a>、
+      <a href="https://hugohe8380.github.io/XOR-MLP-Visualizer/" target="_blank" rel="noopener">XOR · MLP 参数学习实验室</a>。
+      本页在此思路上补上了真实的逐轮参数轨迹、真实采样决策边界与可复现的 Python / JS 实现。</p>
+  </section>
+</main>
+
+<footer>
+  <p><a href="index.html">返回首页</a> · <a href="#top">回到顶部</a> · QQ：2940887141</p>
+  <p style="margin-top:6px">© 2026 于舒瑄 · 人工智能概论第二次作业 · MLP 学习参数的实现与可视化</p>
+</footer>
+
+<script>
+"use strict";
+/* ============ 与 mlp_xor.py 完全一致的模型实现 ============ */
+const X = [[0,0],[0,1],[1,0],[1,1]];
+const Y = [0,1,1,0];
+const PARAM_NAMES = ["w₁₁","w₁₂","w₂₁","w₂₂","b₁","b₂","v₁","v₂","c"];
+const PARAM_DESC = ["x₁→h₁ 权重","x₁→h₂ 权重","x₂→h₁ 权重","x₂→h₂ 权重",
+                    "h₁ 偏置","h₂ 偏置","h₁→输出 权重","h₂→输出 权重","输出偏置"];
+const COLORS = ["#2f6fed","#5b8cf8","#1f4fbd","#7aa5ff","#ef7d32","#f3a35f","#b45b18","#ffc48a"];
+
+function makeLCG(seed){
+  let s = seed >>> 0;
+  return function(){
+    s = (Math.imul(1664525, s) + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+function makeParams(seed){
+  const r = makeLCG(seed);
+  const u = () => -1.2 + 2.4 * r();
+  return [u(),u(),u(),u(),0,0,u(),u(),0];
+}
+function sigmoid(z){
+  if(z >= 0) return 1/(1+Math.exp(-z));
+  const e = Math.exp(z);
+  return e/(1+e);
+}
+function forward(p,x){
+  const z1 = x[0]*p[0] + x[1]*p[2] + p[4];
+  const z2 = x[0]*p[1] + x[1]*p[3] + p[5];
+  const h1 = sigmoid(z1), h2 = sigmoid(z2);
+  const z3 = h1*p[6] + h2*p[7] + p[8];
+  return {z1:z1,z2:z2,z3:z3,h1:h1,h2:h2,y:sigmoid(z3)};
+}
+function lossOf(p){
+  let s = 0;
+  for(let i=0;i<4;i++){
+    const y = Math.min(Math.max(forward(p,X[i]).y,1e-12),1-1e-12);
+    s -= Y[i]*Math.log(y) + (1-Y[i])*Math.log(1-y);
+  }
+  return s/4;
+}
+function accOf(p){
+  let ok = 0;
+  for(let i=0;i<4;i++) if((forward(p,X[i]).y >= 0.5) === (Y[i] >= 0.5)) ok++;
+  return ok;
+}
+function gradients(p){
+  const g = [0,0,0,0,0,0,0,0,0];
+  for(let i=0;i<4;i++){
+    const x = X[i];
+    const f = forward(p,x);
+    const d2 = f.y - Y[i];
+    g[6] += d2*f.h1; g[7] += d2*f.h2; g[8] += d2;
+    const d1a = d2*p[6]*f.h1*(1-f.h1);
+    const d1b = d2*p[7]*f.h2*(1-f.h2);
+    g[0] += d1a*x[0]; g[1] += d1b*x[0];
+    g[2] += d1a*x[1]; g[3] += d1b*x[1];
+    g[4] += d1a;      g[5] += d1b;
+  }
+  return g.map(v => v/4);
+}
+function runTrain(epochs, lr, seed){
+  const p = makeParams(seed);
+  const m = [0,0,0,0,0,0,0,0,0], v = [0,0,0,0,0,0,0,0,0];
+  const snaps = [p.slice()], losses = [lossOf(p)], accs = [accOf(p)];
+  const b1 = 0.9, b2 = 0.999, eps = 1e-8;
+  for(let t=1;t<=epochs;t++){
+    const g = gradients(p);
+    const c1 = Math.pow(b1,t), c2 = Math.pow(b2,t);
+    for(let j=0;j<9;j++){
+      m[j] = b1*m[j] + (1-b1)*g[j];
+      v[j] = b2*v[j] + (1-b2)*g[j]*g[j];
+      const mh = m[j]/(1-c1), vh = v[j]/(1-c2);
+      p[j] -= lr*mh/(Math.sqrt(vh)+eps);
+    }
+    snaps.push(p.slice());
+    losses.push(lossOf(p));
+    accs.push(accOf(p));
+  }
+  return {snaps:snaps, losses:losses, accs:accs, epochs:epochs, lr:lr, seed:seed};
+}
+
+/* ============ 状态 ============ */
+let data = null;
+let cur = 0, playing = false, timer = null;
+let sample = 0, threshold = 0.5, paramView = "w";
+const $ = id => document.getElementById(id);
+
+function setText(id, txt){ $(id).textContent = txt; }
+function fmt(v,d){ return (v>=0?" ":"") + v.toFixed(d===undefined?4:d); }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+function startTrain(epochs, lr, seed){
+  data = runTrain(epochs, lr, seed);
+  cur = epochs;
+  $("epRange").max = String(epochs);
+  $("epRange").value = String(epochs);
+  stopPlay();
+  renderAll();
+}
+function stopPlay(){
+  playing = false;
+  if(timer){ clearInterval(timer); timer = null; }
+  $("playBtn").textContent = "从头播放";
+}
+function togglePlay(){
+  if(playing){ stopPlay(); return; }
+  if(cur >= data.epochs) cur = 0;
+  playing = true;
+  $("playBtn").textContent = "暂停";
+  const step = Math.max(1, Math.round(data.epochs/220));
+  timer = setInterval(()=>{
+    cur = Math.min(data.epochs, cur + step);
+    $("epRange").value = String(cur);
+    renderAll();
+    if(cur >= data.epochs) stopPlay();
+  }, 24);
+}
+
+/* ============ 画布工具 ============ */
+function setup(cv){
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 400;
+  const h = cv.classList.contains("square") ? w : (cv.clientHeight || 220);
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  return {ctx:ctx,w:w,h:h};
+}
+function axes(ctx,w,h,pad,rows){
+  ctx.strokeStyle = "#e6edf9"; ctx.lineWidth = 1;
+  ctx.fillStyle = "#8a96a8"; ctx.font = "11px Consolas,monospace";
+  for(let r=0;r<=rows;r++){
+    const y = pad.t + (h-pad.t-pad.b)*r/rows;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+  }
+}
+
+/* ============ 各类可视化 ============ */
+function drawLoss(){
+  const cv = $("lossCv"), o = setup(cv), ctx = o.ctx, w = o.w, h = o.h;
+  const pad = {l:44,r:12,t:14,b:26};
+  const maxY = Math.max(0.75, data.losses[0]*1.05);
+  axes(ctx,w,h,pad,4);
+  ctx.fillStyle = "#8a96a8"; ctx.font = "11px Consolas,monospace";
+  for(let r=0;r<=4;r++){
+    const val = maxY*(1-r/4);
+    const y = pad.t + (h-pad.t-pad.b)*r/4;
+    ctx.fillText(val.toFixed(2), 4, y+4);
+  }
+  ctx.fillText("0", pad.l, h-8);
+  ctx.fillText(String(data.epochs), w-pad.r-28, h-8);
+  const px = e => pad.l + (w-pad.l-pad.r)*e/data.epochs;
+  const py = v => pad.t + (h-pad.t-pad.b)*(1-Math.min(1,v/maxY));
+  ctx.strokeStyle = "#2f6fed"; ctx.lineWidth = 2.2; ctx.beginPath();
+  const step = Math.max(1, Math.floor(data.epochs/w));
+  for(let e=0;e<=data.epochs;e+=step){ const x=px(e), y=py(data.losses[e]); e===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+  ctx.lineTo(px(data.epochs),py(data.losses[data.epochs]));
+  ctx.stroke();
+  ctx.strokeStyle = "#ef7d32"; ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px(cur),pad.t); ctx.lineTo(px(cur),h-pad.b); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = "#ef7d32"; ctx.beginPath(); ctx.arc(px(cur),py(data.losses[cur]),5,0,Math.PI*2); ctx.fill();
+}
+
+function drawParams(){
+  const cv = $("paramCv"), o = setup(cv), ctx = o.ctx, w = o.w, h = o.h;
+  const pad = {l:46,r:12,t:14,b:26};
+  const idx = paramView === "w" ? [0,1,2,3,6,7] : [4,5,8];
+  let lo = 0, hi = 0;
+  for(const j of idx) for(let e=0;e<=data.epochs;e+=Math.max(1,Math.floor(data.epochs/300))){
+    const v = data.snaps[e][j]; if(v<lo)lo=v; if(v>hi)hi=v;
+  }
+  if(hi-lo < 0.5){ hi += 0.25; lo -= 0.25; }
+  const span = hi-lo; lo -= span*0.08; hi += span*0.08;
+  axes(ctx,w,h,pad,4);
+  ctx.fillStyle="#8a96a8"; ctx.font="11px Consolas,monospace";
+  for(let r=0;r<=4;r++){
+    const val = hi-(hi-lo)*r/4;
+    const y = pad.t+(h-pad.t-pad.b)*r/4;
+    ctx.fillText(val.toFixed(1),2,y+4);
+  }
+  const zeroY = pad.t+(h-pad.t-pad.b)*(hi/(hi-lo));
+  ctx.strokeStyle="#c9d6ee"; ctx.beginPath(); ctx.moveTo(pad.l,zeroY); ctx.lineTo(w-pad.r,zeroY); ctx.stroke();
+  const px = e => pad.l+(w-pad.l-pad.r)*e/data.epochs;
+  const py = v => pad.t+(h-pad.t-pad.b)*(hi-v)/(hi-lo);
+  idx.forEach((j,k)=>{
+    ctx.strokeStyle = COLORS[k]; ctx.lineWidth = 1.8; ctx.beginPath();
+    const step = Math.max(1,Math.floor(data.epochs/w));
+    for(let e=0;e<=data.epochs;e+=step){ const x=px(e),y=py(data.snaps[e][j]); e===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+    ctx.lineTo(px(data.epochs),py(data.snaps[data.epochs][j])); ctx.stroke();
+  });
+  ctx.strokeStyle="#ef7d32"; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(px(cur),pad.t); ctx.lineTo(px(cur),h-pad.b); ctx.stroke(); ctx.setLineDash([]);
+  const names = ["w₁₁","w₁₂","w₂₁","w₂₂","b₁","b₂","v₁","v₂","c"];
+  $("paramLegend").innerHTML = idx.map((j,k)=>'<span><i style="background:'+COLORS[k]+'"></i>'+names[j]+'</span>').join("");
+}
+
+function drawNetwork(p){
+  const f = forward(p, X[sample]);
+  const nodes = [
+    {x:65,y:70,r:19,t:X[sample][0].toFixed(0),fill:"#eaf1ff",stroke:"#2f6fed"},
+    {x:65,y:180,r:19,t:X[sample][1].toFixed(0),fill:"#eaf1ff",stroke:"#2f6fed"},
+    {x:230,y:70,r:21,t:f.h1.toFixed(2),fill:"#eaf1ff",stroke:"#2f6fed"},
+    {x:230,y:180,r:21,t:f.h2.toFixed(2),fill:"#eaf1ff",stroke:"#2f6fed"},
+    {x:390,y:125,r:21,t:f.y.toFixed(2),fill:"#fff2e5",stroke:"#ef7d32"}
+  ];
+  const links = [
+    {a:0,b:2,val:p[0],lx:145,ly:58},{a:0,b:3,val:p[1],lx:140,ly:135},
+    {a:1,b:2,val:p[2],lx:140,ly:145},{a:1,b:3,val:p[3],lx:145,ly:195},
+    {a:2,b:4,val:p[6],lx:310,ly:78},{a:3,b:4,val:p[7],lx:310,ly:172}
+  ];
+  let maxAbs = 1;
+  links.forEach(l => maxAbs = Math.max(maxAbs,Math.abs(l.val)));
+  let svg = "";
+  links.forEach(l=>{
+    const A=nodes[l.a],B=nodes[l.b];
+    const width = 1.2 + 5.5*Math.abs(l.val)/maxAbs;
+    const color = l.val>=0 ? "#2f6fed" : "#ef7d32";
+    svg += '<line x1="'+A.x+'" y1="'+A.y+'" x2="'+B.x+'" y2="'+B.y+'" stroke="'+color+'" stroke-width="'+width.toFixed(2)+'" opacity="0.75"/>';
+    svg += '<text x="'+l.lx+'" y="'+l.ly+'" font-size="11" font-family="Consolas,monospace" fill="'+color+'" text-anchor="middle">'+fmt(l.val,2)+'</text>';
+  });
+  $("netLines").innerHTML = svg;
+  $("netNodes").innerHTML = nodes.map(n =>
+    '<circle cx="'+n.x+'" cy="'+n.y+'" r="'+n.r+'" fill="'+n.fill+'" stroke="'+n.stroke+'" stroke-width="2"/>'+
+    '<text x="'+n.x+'" y="'+(n.y+4)+'" font-size="12" font-family="Consolas,monospace" fill="#1f2733" text-anchor="middle">'+n.t+'</text>'
+  ).join("");
+  $("netLabels").innerHTML =
+    '<text x="230" y="112" font-size="11" fill="#5b6472" text-anchor="middle">b₁ = '+fmt(p[4],2)+' , '+fmt(p[5],2)+'</text>'+
+    '<text x="390" y="170" font-size="11" fill="#5b6472" text-anchor="middle">c = '+fmt(p[8],2)+'</text>'+
+    '<text x="230" y="238" font-size="11" fill="#5b6472" text-anchor="middle">当前样本 ['+X[sample][0]+', '+X[sample][1]+'] ，目标 y = '+Y[sample]+'</text>';
+}
+
+function lerp(a,b,t){ return [Math.round(a[0]+(b[0]-a[0])*t),Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t)]; }
+function drawBoundary(p){
+  const cv = $("boundCv"), o = setup(cv), ctx = o.ctx, w = o.w, h = o.h;
+  const S = 130;
+  const off = document.createElement("canvas"); off.width = S; off.height = S;
+  const octx = off.getContext("2d");
+  const img = octx.createImageData(S,S);
+  const low = [234,241,255], lowDeep = [47,111,237];
+  const high = [255,242,229], highDeep = [239,125,50];
+  for(let py=0;py<S;py++){
+    for(let px=0;px<S;px++){
+      const x1 = -0.15 + 1.3*px/(S-1);
+      const x2 = -0.15 + 1.3*(1-py/(S-1));
+      const y = forward(p,[x1,x2]).y;
+      const edge = Math.abs(y-threshold) < 0.018;
+      let c;
+      if(edge) c = [255,255,255];
+      else if(y < threshold){
+        const t = Math.min(1,(threshold-y)/Math.max(threshold,0.01)*1.5);
+        c = lerp(low,lowDeep,t);
+      } else {
+        const t = Math.min(1,(y-threshold)/Math.max(1-threshold,0.01)*1.5);
+        c = lerp(high,highDeep,t);
+      }
+      const k = (py*S+px)*4;
+      img.data[k]=c[0]; img.data[k+1]=c[1]; img.data[k+2]=c[2]; img.data[k+3]=255;
+    }
+  }
+  octx.putImageData(img,0,0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(off,0,0,S,S,0,0,w,h);
+  // 坐标轴与四个样本点
+  const mapX = x => w*(x+0.15)/1.3, mapY = y => h*(1-(y+0.15)/1.3);
+  ctx.strokeStyle="rgba(255,255,255,.7)"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(mapX(0),0); ctx.lineTo(mapX(0),h); ctx.moveTo(mapX(1),0); ctx.lineTo(mapX(1),h); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,mapY(0)); ctx.lineTo(w,mapY(0)); ctx.moveTo(0,mapY(1)); ctx.lineTo(w,mapY(1)); ctx.stroke();
+  for(let i=0;i<4;i++){
+    const cx=mapX(X[i][0]), cy=mapY(X[i][1]);
+    ctx.beginPath(); ctx.arc(cx,cy,8,0,Math.PI*2);
+    ctx.fillStyle = Y[i]===1 ? "#ef7d32" : "#2f6fed"; ctx.fill();
+    ctx.lineWidth=2.5; ctx.strokeStyle="#fff"; ctx.stroke();
+    ctx.fillStyle="#1f2733"; ctx.font="11px Consolas,monospace";
+    ctx.fillText(X[i][0]+","+X[i][1], cx+11, cy-8);
+  }
+  ctx.fillStyle="#5b6472"; ctx.font="11px Consolas,monospace";
+  ctx.fillText("x₁ →", w-42, h-8);
+}
+
+function drawHidden(p){
+  let g = "";
+  for(let i=0;i<=4;i++){
+    const v = 40+200*i/4, y = 200-180*i/4;
+    g += '<line x1="40" y1="'+y+'" x2="240" y2="'+y+'" stroke="#e6edf9" stroke-width="1"/>';
+    g += '<line x1="'+v+'" y1="20" x2="'+v+'" y2="200" stroke="#e6edf9" stroke-width="1"/>';
+  }
+  g += '<line x1="40" y1="200" x2="248" y2="200" stroke="#9fb0cc" stroke-width="1.5"/>';
+  g += '<line x1="40" y1="200" x2="40" y2="14" stroke="#9fb0cc" stroke-width="1.5"/>';
+  g += '<text x="252" y="204" font-size="12" fill="#5b6472">h₁</text><text x="26" y="14" font-size="12" fill="#5b6472">h₂</text>';
+  g += '<text x="34" y="216" font-size="11" fill="#8a96a8">0</text><text x="234" y="216" font-size="11" fill="#8a96a8">1</text>';
+  $("hiddenGrid").innerHTML = g;
+  // 输出层分界线：v1*h1 + v2*h2 + c = 0
+  let pts = [];
+  if(Math.abs(p[7]) > 1e-6){
+    for(let i=0;i<=100;i++){
+      const h1 = i/100;
+      const h2 = -(p[6]*h1+p[8])/p[7];
+      if(h2>=0 && h2<=1) pts.push([40+200*h1, 200-180*h2]);
+    }
+  }
+  $("hiddenLine").innerHTML = pts.length>1
+    ? '<polyline points="'+pts.map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join(" ")+'" fill="none" stroke="#2f6fed" stroke-width="2" stroke-dasharray="6 4"/>'
+    : '<text x="140" y="120" font-size="11" fill="#8a96a8" text-anchor="middle">分界线暂不在 [0,1] 范围内</text>';
+  let dots = "";
+  for(let i=0;i<4;i++){
+    const f = forward(p,X[i]);
+    const cx = 40+200*f.h1, cy = 200-180*f.h2;
+    const color = Y[i]===1 ? "#ef7d32" : "#2f6fed";
+    dots += '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="7" fill="'+color+'" stroke="#fff" stroke-width="2"/>';
+    dots += '<text x="'+(cx+10).toFixed(1)+'" y="'+(cy-7).toFixed(1)+'" font-size="11" font-family="Consolas,monospace" fill="#1f2733">'+X[i][0]+''+X[i][1]+'</text>';
+  }
+  dots += '<text x="140" y="238" font-size="11" fill="#5b6472" text-anchor="middle">四个点在隐藏空间中的新位置 · 虚线为输出层分界</text>';
+  $("hiddenDots").innerHTML = dots;
+}
+
+function renderTexts(p){
+  const loss = data.losses[cur], ok = data.accs[cur];
+  setText("epBadge", cur + " / " + data.epochs);
+  setText("mLoss", loss.toFixed(4));
+  setText("mAcc", (ok*25) + "%");
+  setText("mMax", Math.max.apply(null,[Math.abs(p[0]),Math.abs(p[1]),Math.abs(p[2]),Math.abs(p[3]),Math.abs(p[6]),Math.abs(p[7])]).toFixed(2));
+  setText("mOk", ok + " / 4");
+  setText("thrVal", threshold.toFixed(2));
+  setText("lossNote", "第 " + cur + " 轮：" + loss.toFixed(4));
+
+  // 参数表
+  const p0 = data.snaps[0];
+  $("paramBody").innerHTML = PARAM_NAMES.map((n,j)=>
+    '<tr><td>'+n+'</td><td class="muted">'+PARAM_DESC[j]+'</td><td class="mono muted">'+fmt(p0[j],3)+'</td><td class="mono"><b>'+fmt(p[j],3)+'</b></td></tr>'
+  ).join("");
+
+  // 预测表
+  $("predBody").innerHTML = X.map((x,i)=>{
+    const y = forward(p,x).y;
+    const right = (y >= threshold) === (Y[i] >= 0.5);
+    return '<tr><td class="mono">['+x[0]+', '+x[1]+']</td><td class="mono">'+Y[i]+'</td><td class="mono">'+y.toFixed(4)+'</td><td class="'+(right?"ok":"bad")+'">'+(right?"正确":"错误")+'</td></tr>';
+  }).join("");
+
+  // 前向计算展开
+  const x = X[sample], f = forward(p,x);
+  const line = (label,expr,val) => '<div>'+label+' = '+expr+' = <b>'+fmt(val,4)+'</b></div>';
+  $("calcBox").innerHTML =
+    line("z₁", x[0]+"×("+fmt(p[0],3)+") + "+x[1]+"×("+fmt(p[2],3)+") + "+fmt(p[4],3), f.z1) +
+    line("h₁", "σ(z₁)", f.h1) +
+    line("z₂", x[0]+"×("+fmt(p[1],3)+") + "+x[1]+"×("+fmt(p[3],3)+") + "+fmt(p[5],3), f.z2) +
+    line("h₂", "σ(z₂)", f.h2) +
+    line("z₃", fmt(f.h1,3)+"×("+fmt(p[6],3)+") + "+fmt(f.h2,3)+"×("+fmt(p[7],3)+") + "+fmt(p[8],3), f.z3) +
+    line("ŷ", "σ(z₃)", f.y) +
+    '<div style="margin-top:8px;color:#5b6472">目标 y = '+Y[sample]+' ，误差 ŷ − y = <b>'+fmt(f.y-Y[sample],4)+'</b>（反向传播的起点）</div>';
+
+  // 实验提示
+  let msg;
+  if(cur === 0) msg = "第 0 轮：参数还是随机数，四个点的预测都接近 0.5，决策区域几乎是一整片模糊。";
+  else if(loss > 0.6) msg = "平台期：Sigmoid 接近饱和，误差虽然存在但梯度很小，参数变化缓慢。";
+  else if(ok < 4) msg = "边界正在形成：Loss 下降，但仍有样本没被正确分开。";
+  else if(loss < 0.01 && ok === 4) msg = "已收敛：四个样本全部分类正确，对角的两块区域清晰可见。";
+  else msg = "四个样本已分类正确，参数仍在继续微调，预测概率越来越接近 0 或 1。";
+  if(data.losses[data.epochs] > 0.2) msg = "注意：这次训练卡在局部极小（Loss ≈ "+data.losses[data.epochs].toFixed(4)+"），换一个种子再试就能学会。";
+  $("labNote").innerHTML = esc(msg);
+}
+
+function renderAll(){
+  if(!data) return;
+  const p = data.snaps[cur];
+  renderTexts(p);
+  drawLoss(); drawParams(); drawNetwork(p); drawBoundary(p); drawHidden(p);
+}
+
+/* ============ 交互绑定 ============ */
+$("epRange").addEventListener("input", e => { stopPlay(); cur = +e.target.value; renderAll(); });
+$("thrRange").addEventListener("input", e => { threshold = +e.target.value; renderAll(); });
+$("playBtn").addEventListener("click", togglePlay);
+$("resetBtn").addEventListener("click", () => { stopPlay(); cur = 0; $("epRange").value = "0"; renderAll(); });
+$("retrainBtn").addEventListener("click", () => {
+  startTrain(+$("epSel").value, +$("lrSel").value, Math.max(0,Math.floor(+$("seedIn").value||0)));
+});
+$("badSeedBtn").addEventListener("click", () => {
+  $("seedIn").value = "20261122";
+  startTrain(+$("epSel").value, +$("lrSel").value, 20261122);
+  cur = 0; $("epRange").value = "0"; renderAll();
+});
+$("tabW").addEventListener("click", () => {
+  paramView = "w"; $("tabW").classList.add("on"); $("tabB").classList.remove("on"); drawParams();
+});
+$("tabB").addEventListener("click", () => {
+  paramView = "b"; $("tabB").classList.add("on"); $("tabW").classList.remove("on"); drawParams();
+});
+$("samplePick").innerHTML = X.map((x,i)=>'<button data-i="'+i+'" class="'+(i===0?"on":"")+'">['+x[0]+', '+x[1]+']</button>').join("");
+$("samplePick").addEventListener("click", e => {
+  if(e.target.tagName !== "BUTTON") return;
+  sample = +e.target.dataset.i;
+  Array.prototype.forEach.call($("samplePick").children, b => b.classList.toggle("on", b === e.target));
+  drawNetwork(data.snaps[cur]);
+  renderTexts(data.snaps[cur]);
+});
+let rt = null;
+window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(renderAll, 150); });
+
+/* 页面加载即用同一套公式在浏览器里真实训练一次 */
+startTrain(1500, 0.05, 2);
+</script>
+<script>
+/* 线上分享链接带有访问凭证时，让站内文件链接沿用（返回首页、下载源码）；本地打开时不做任何改动 */
+(function () {
+  var q = location.search;
+  if (!q) return;
+  Array.prototype.forEach.call(document.querySelectorAll('a[href]'), function (a) {
+    var h = a.getAttribute('href');
+    if (!h || h.charAt(0) === '#' || /^(https?:|mailto:)/i.test(h) || h.indexOf('?') !== -1) return;
+    if (/\.(html|py)$/i.test(h)) a.setAttribute('href', h + q);
+  });
+})();
+</script>
+</body>
+</html>
